@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Water7 Packet Tool — SoilTransmitter</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -28,8 +28,9 @@
                     <div class="preset-group">
                         <div class="preset-input full-width">
                             <label for="decodeInput">Hex-строка</label>
-                            <textarea id="decodeInput" class="input hex-textarea hex-input" rows="3"
-                                placeholder="99 3C 0A 01 14 32 0A …" spellcheck="false"></textarea>
+                            <input type="text" id="decodeInput" class="input hex-input hex-line-input"
+                                placeholder="99 3C 0A 01 14 32" spellcheck="false" autocomplete="off"
+                                autocapitalize="off" inputmode="text">
                             <span class="hint">Пробелы, запятые и префикс 0x допустимы</span>
                         </div>
                         <div class="flash-buttons single-col" style="margin-top: 15px;">

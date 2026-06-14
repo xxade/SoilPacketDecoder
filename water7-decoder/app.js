@@ -404,7 +404,7 @@ function initDecode() {
     });
 
     document.getElementById('decodeInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        if (e.key === 'Enter') {
             e.preventDefault();
             document.getElementById('decodeBtn').click();
         }
