@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water7 Packet Tool — SoilTransmitter</title>
+    <style>
+:root {
+    --accent: #9D2832;
+    --accent-dark: #7A1F28;
+    --accent-hover: #B8323E;
+    --accent-soft: rgba(157, 40, 50, 0.08);
+    --accent-ring: rgba(157, 40, 50, 0.25);
+    --radius-card: 40px;
+    --radius-info: 8px;
+    --radius-modal: 30px;
+    --radius-control: 30px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: #FFFFFF;
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 640px;
+    margin: 0 auto;
+    background: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+    color: white;
+    padding: 14px 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+header h1 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+header p {
+    margin-top: 4px;
+    font-size: 0.75em;
+    opacity: 0.85;
+}
+
+.scaled-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+    padding: 22px;
+}
+
+section {
+    margin-bottom: 25px;
+}
+
+section:last-child {
+    margin-bottom: 0;
+}
+
+h2 {
+    color: #000000;
+    margin-bottom: 20px;
+    font-size: 1em;
+    margin-left: 6px;
+    font-weight: 700;
+}
+
+.subsection-label {
+    color: #000000;
+    margin: 0 0 15px 6px;
+    font-size: 1em;
+    font-weight: inherit;
+}
+
+.section-divider {
+    height: 1px;
+    background: #e8e8e8;
+    border: none;
+    margin: 18px 6px 16px;
+}
+
+.preset-group {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: var(--radius-card);
+}
+
+.preset-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.preset-input {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.preset-input.full-width {
+    grid-column: 1 / -1;
+}
+
+.preset-input label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+}
+
+.input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--radius-control);
+    font-size: 1em;
+    line-height: 1.25;
+    transition: border-color 0.3s;
+    background: #fff;
+    color: #333;
+    min-height: 38px;
+}
+
+select.input,
+select.select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23555' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.hex-input {
+    text-transform: uppercase;
+    font-family: Menlo, "DejaVu Sans Mono", Consolas, "Lucida Console", monospace;
+}
+
+.hint {
+    display: block;
+    margin-top: 5px;
+    color: #888;
+    font-size: 0.9em;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--radius-control);
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary,
+.btn-success {
+    background: var(--accent);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-success:hover:not(:disabled) {
+    background: var(--accent-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px var(--accent-ring);
+}
+
+.btn-outline {
+    background: #fff;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background: var(--accent-soft);
+    transform: translateY(-2px);
+}
+
+.flash-buttons {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.flash-buttons.two-cols {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.flash-buttons.single-col {
+    grid-template-columns: 1fr;
+}
+
+.flash-buttons .btn {
+    width: 100%;
+    font-size: 0.85em;
+    padding: 10px 12px;
+}
+
+.output-container {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.output-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+}
+
+.output-textarea {
+    width: 100%;
+    min-height: 240px;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-family: Menlo, "DejaVu Sans Mono", Consolas, "Lucida Console", monospace;
+    font-size: 0.85em;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-y: auto;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.output-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.hex-textarea {
+    min-height: 72px;
+    resize: vertical;
+    font-family: Menlo, "DejaVu Sans Mono", Consolas, "Lucida Console", monospace;
+    font-size: 0.9em;
+}
+
+.file-info {
+    background: #f5f5f5;
+    padding: 10px 12px;
+    border-radius: var(--radius-info);
+    border-left: 4px solid var(--accent);
+    margin-top: 12px;
+}
+
+.file-info p {
+    margin: 4px 0;
+    font-size: 0.9em;
+}
+
+.file-info .key {
+    font-weight: 600;
+    color: #555;
+}
+
+.result {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    z-index: 2000;
+    padding: 15px 20px;
+    border-radius: var(--radius-control);
+    font-weight: 500;
+    min-width: 300px;
+    max-width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+}
+
+.result.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.result.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.result.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.mode-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.mode-tab {
+    padding: 10px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--radius-control);
+    background: #fff;
+    font-weight: 600;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #555;
+}
+
+.mode-tab.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.encode-fields.hidden {
+    display: none;
+}
+
+.copy-row {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    margin-top: 10px;
+}
+
+.copy-row .output-textarea {
+    flex: 1;
+    min-height: 48px;
+    max-height: 48px;
+}
+
+.copy-row .btn {
+    flex-shrink: 0;
+    padding: 10px 16px;
+    font-size: 0.75em;
+}
+
+@media (max-width: 520px) {
+    .preset-inputs {
+        grid-template-columns: 1fr;
+    }
+
+    main {
+        padding: 16px;
+    }
+}
+</style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Water7 Packet Tool</h1>
+            <p>SoilTransmitter — декодер / энкодер пакетов</p>
+        </header>
+
+        <div class="scaled-content">
+            <main>
+                <div id="toast" class="result hidden"></div>
+
+                <div class="mode-tabs">
+                    <button type="button" class="mode-tab active" data-mode="decode">Декодирование</button>
+                    <button type="button" class="mode-tab" data-mode="encode">Кодирование</button>
+                </div>
+
+                <!-- DECODE -->
+                <section id="decodeSection">
+                    <h2>Входной пакет (hex)</h2>
+                    <div class="preset-group">
+                        <div class="preset-input full-width">
+                            <label for="decodeInput">Hex-строка</label>
+                            <textarea id="decodeInput" class="input hex-textarea hex-input" rows="3"
+                                placeholder="99 3C 0A 01 14 32 0A …" spellcheck="false"></textarea>
+                            <span class="hint">Пробелы, запятые и префикс 0x допустимы</span>
+                        </div>
+                        <div class="flash-buttons single-col" style="margin-top: 15px;">
+                            <button type="button" id="decodeBtn" class="btn btn-success">Декодировать</button>
+                        </div>
+                        <div class="output-container">
+                            <label for="decodeOutput">Результат</label>
+                            <pre id="decodeOutput" class="output-textarea"></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ENCODE -->
+                <section id="encodeSection" class="hidden">
+                    <h2>Собрать пакет</h2>
+                    <div class="preset-group">
+                        <div class="preset-inputs">
+                            <div class="preset-input full-width">
+                                <label for="encodeType">Тип пакета</label>
+                                <select id="encodeType" class="input select">
+                                    <option value="27">0x27 — Control (команда)</option>
+                                    <option value="07">0x07 — Read single</option>
+                                    <option value="03">0x03 — Read multiple</option>
+                                    <option value="06">0x06 — Write single</option>
+                                    <option value="10">0x10 — Write multiple</option>
+                                </select>
+                            </div>
+
+                            <!-- Control -->
+                            <div id="encodeControl" class="encode-fields preset-input full-width">
+                                <label for="encodeCmd">Команда</label>
+                                <select id="encodeCmd" class="input select">
+                                    <option value="1">1 — FORCE_WAKEUP</option>
+                                    <option value="2">2 — RESET_DEVICE</option>
+                                    <option value="3">3 — FACTORY_RESET</option>
+                                    <option value="4">4 — SEND_STATUS_NOW</option>
+                                </select>
+                                <span class="hint">Payload для команд 1–4 обычно 0</span>
+                            </div>
+
+                            <!-- Read/Write address -->
+                            <div id="encodeAddr" class="encode-fields hidden preset-input">
+                                <label for="encodeAddress">Адрес param</label>
+                                <select id="encodeAddress" class="input select">
+                                    <option value="0">0 — Humidity (%)</option>
+                                    <option value="1">1 — Conductivity (µS/cm)</option>
+                                    <option value="2">2 — Temperature (0.01 °C)</option>
+                                    <option value="3">3 — Battery (mV, RO)</option>
+                                    <option value="10">10 — WakePeriod (сек)</option>
+                                    <option value="100">100 — ProtocolVersion</option>
+                                    <option value="101">101 — SensorType</option>
+                                    <option value="102">102 — BoardRevision</option>
+                                    <option value="103">103 — FirmwareVersion</option>
+                                    <option value="104">104 — ManufactureDate</option>
+                                </select>
+                            </div>
+
+                            <!-- Read/Write count -->
+                            <div id="encodeCount" class="encode-fields hidden preset-input">
+                                <label for="encodeParamCount">Кол-во params</label>
+                                <input type="number" id="encodeParamCount" class="input" value="1" min="1" max="14">
+                            </div>
+
+                            <!-- Write value -->
+                            <div id="encodeValue" class="encode-fields hidden preset-input full-width">
+                                <label for="encodeParamValue">Значение (int32)</label>
+                                <input type="text" id="encodeParamValue" class="input" placeholder="3600" value="0">
+                                <span class="hint" id="encodeValueHint"></span>
+                            </div>
+
+                            <!-- Write multiple values -->
+                            <div id="encodeMultiValues" class="encode-fields hidden preset-input full-width">
+                                <label for="encodeMultiValueList">Значения (по одному на строку, int32 BE)</label>
+                                <textarea id="encodeMultiValueList" class="input hex-textarea" rows="4"
+                                    placeholder="25&#10;1200&#10;2350"></textarea>
+                            </div>
+
+                            <div id="encodePayload" class="encode-fields preset-input full-width">
+                                <label for="encodeControlPayload">Payload (int32 BE, опционально)</label>
+                                <input type="text" id="encodeControlPayload" class="input" value="0">
+                            </div>
+                        </div>
+
+                        <div class="flash-buttons single-col" style="margin-top: 15px;">
+                            <button type="button" id="encodeBtn" class="btn btn-success">Собрать пакет</button>
+                        </div>
+
+                        <div class="copy-row">
+                            <pre id="encodeOutput" class="output-textarea"></pre>
+                            <button type="button" id="copyBtn" class="btn btn-outline">Копировать</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script>
+'use strict';
+
+const PARAMS = {
+    0:   { name: 'Humidity', unit: '%', rw: 'RW' },
+    1:   { name: 'Conductivity', unit: 'µS/cm', rw: 'RW' },
+    2:   { name: 'Temperature', unit: '0.01 °C', rw: 'RW', decode: v => (v / 100).toFixed(2) + ' °C' },
+    3:   { name: 'Battery', unit: 'mV', rw: 'RO' },
+    10:  { name: 'WakePeriod', unit: 'сек', rw: 'RW' },
+    100: { name: 'ProtocolVersion', unit: '—', rw: 'RO' },
+    101: { name: 'SensorType', unit: 'enum', rw: 'RO', decode: decodeSensorType },
+    102: { name: 'BoardRevision', unit: '—', rw: 'RO' },
+    103: { name: 'FirmwareVersion', unit: 'packed', rw: 'RO', decode: decodeFirmwareVersion },
+    104: { name: 'ManufactureDate', unit: 'uint16', rw: 'RO' },
+};
+
+const COMMANDS = {
+    1: 'FORCE_WAKEUP',
+    2: 'RESET_DEVICE',
+    3: 'FACTORY_RESET',
+    4: 'SEND_STATUS_NOW',
+};
+
+const EVENTS = {
+    1: { name: 'LOW_BATTERY', decode: p => `VDD = ${p} mV` },
+    2: { name: 'SENSOR_ERROR', decode: () => 'все датчики offline' },
+    3: { name: 'MODBUS_TIMEOUT', decode: p => `Modbus ID = ${p}` },
+    4: { name: 'FLASH_ERROR', decode: () => 'ошибка flash' },
+    5: { name: 'SETTINGS_CHANGED', decode: () => 'WakePeriod записан' },
+    6: { name: 'DEVICE_RESET', decode: () => 'сброс / init' },
+};
+
+const ERROR_CODES = {
+    0x01: 'INVALID_TYPE',
+    0x02: 'INVALID_ADDRESS',
+    0x03: 'INVALID_VALUE',
+    0x04: 'LL_ERROR',
+    0x05: 'READ_ONLY',
+    0x06: 'INVALID_LENGTH',
+};
+
+const PACKET_TYPES = {
+    0x03: 'Read multiple',
+    0x06: 'Write single',
+    0x07: 'Read single',
+    0x10: 'Write multiple',
+    0x20: 'Event',
+    0x27: 'Control',
+    0x29: 'FW update',
+    0x99: 'Regular UL (SoilTransmitter)',
+};
+
+const WRITE_HINTS = {
+    0: '0…100 %',
+    1: '0…65535 µS/cm',
+    2: '−5000…20500 (сотые °C)',
+    10: '60…604800 сек',
+};
+
+function decodeSensorType(v) {
+    const map = { 0: 'unknown', 1: 'SOIL_RS485' };
+    return `${v} (${map[v] ?? '?'})`;
+}
+
+function decodeFirmwareVersion(v) {
+    const year = (v >> 10) & 0x3FFF;
+    const month = (v >> 6) & 0x0F;
+    const day = v & 0x3F;
+    return `${year}.${month}.${day} (raw 0x${(v >>> 0).toString(16).toUpperCase()})`;
+}
+
+function parseHex(str) {
+    const cleaned = str.replace(/0x/gi, '').replace(/[^0-9a-fA-F]/g, '');
+    if (!cleaned.length) return [];
+    if (cleaned.length % 2 !== 0) throw new Error('Нечётное число hex-символов');
+    const bytes = [];
+    for (let i = 0; i < cleaned.length; i += 2) {
+        bytes.push(parseInt(cleaned.slice(i, i + 2), 16));
+    }
+    return bytes;
+}
+
+function toHex(bytes, sep = ' ') {
+    return bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(sep);
+}
+
+function readBE16(bytes, off) {
+    return (bytes[off] << 8) | bytes[off + 1];
+}
+
+function readBE32(bytes, off) {
+    return ((bytes[off] << 24) | (bytes[off + 1] << 16) | (bytes[off + 2] << 8) | bytes[off + 3]) >> 0;
+}
+
+function readLE16(bytes, off) {
+    return (bytes[off + 1] << 8) | bytes[off];
+}
+
+function writeBE16(val) {
+    return [(val >> 8) & 0xFF, val & 0xFF];
+}
+
+function writeBE32(val) {
+    val = val >> 0;
+    return [(val >> 24) & 0xFF, (val >> 16) & 0xFF, (val >> 8) & 0xFF, val & 0xFF];
+}
+
+function formatParam(addr, raw) {
+    const p = PARAMS[addr];
+    if (!p) return `param ${addr}: ${raw}`;
+    const decoded = p.decode ? p.decode(raw) : `${raw} ${p.unit}`;
+    return `${p.name} [${addr}] = ${decoded}`;
+}
+
+function decodeVddWire(wire) {
+    const mv = 2500 + wire * 5;
+    return `${mv} mV (wire=${wire})`;
+}
+
+function decodeSensorBlock(bytes, idx) {
+    const off = idx * 4;
+    const tRaw = readLE16(bytes, off);
+    const vwc = bytes[off + 2];
+    const ec = bytes[off + 3];
+    const allZero = tRaw === 0 && vwc === 0 && ec === 0;
+
+    if (allZero) {
+        return `  #${idx}: offline (нули)`;
+    }
+    const temp = (tRaw * 0.1).toFixed(1);
+    const moisture = (vwc * 0.5).toFixed(1);
+    const cond = ec * 40;
+    return `  #${idx}: T=${temp} °C, VWC=${moisture} %, EC=${cond} µS/cm  [${toHex(bytes.slice(off, off + 4), '')}]`;
+}
+
+function decodeRegular99(bytes) {
+    const lines = [];
+    lines.push('Тип: Regular UL 0x99 (SoilTransmitter)');
+    lines.push(`Длина: ${bytes.length} байт`);
+
+    if (bytes.length < 2) {
+        lines.push('Ошибка: слишком короткий пакет (мин. 2 байта)');
+        return lines.join('\n');
+    }
+
+    const wire = bytes[1];
+    lines.push(`VDD: ${decodeVddWire(wire)}`);
+
+    const dataLen = bytes.length - 2;
+    if (dataLen % 4 !== 0) {
+        lines.push(`Предупреждение: хвост ${dataLen} байт — не кратен 4`);
+    }
+
+    const count = Math.floor(dataLen / 4);
+    lines.push(`Датчиков: ${count}`);
+    for (let i = 0; i < count; i++) {
+        lines.push(decodeSensorBlock(bytes.slice(2), i));
+    }
+    return lines.join('\n');
+}
+
+function decodeError(bytes) {
+    const baseType = bytes[0] & 0xBF;
+    const typeName = PACKET_TYPES[baseType] ?? `0x${baseType.toString(16).toUpperCase()}`;
+    const code = bytes[1];
+    const codeName = ERROR_CODES[code] ?? `0x${code.toString(16).toUpperCase()}`;
+    return [
+        `Тип: Ошибка Water7`,
+        `Исходный тип: 0x${baseType.toString(16).toUpperCase().padStart(2, '0')} (${typeName})`,
+        `Код: 0x${code.toString(16).toUpperCase().padStart(2, '0')} — ${codeName}`,
+        `Hex: ${toHex(bytes)}`,
+    ].join('\n');
+}
+
+function decodeReadMultiple(bytes) {
+    const lines = [];
+    const addr = readBE16(bytes, 1);
+    const count = readBE16(bytes, 3);
+    lines.push('Тип: Read multiple 0x03');
+    lines.push(`Адрес: ${addr}, кол-во: ${count}`);
+    lines.push(`Длина: ${bytes.length} байт (ожид. ${5 + count * 4})`);
+
+    if (bytes.length >= 5 + count * 4) {
+        lines.push('Значения:');
+        for (let i = 0; i < count; i++) {
+            const off = 5 + i * 4;
+            const val = readBE32(bytes, off);
+            lines.push(`  ${formatParam(addr + i, val)}`);
+        }
+    }
+    lines.push(`Hex: ${toHex(bytes)}`);
+    return lines.join('\n');
+}
+
+function decodeReadSingle(bytes) {
+    const isRequest = bytes.length === 3;
+    const addr = readBE16(bytes, 1);
+    const lines = [];
+    lines.push(`Тип: Read single 0x07 (${isRequest ? 'запрос DL' : 'ответ UL'})`);
+    lines.push(`Адрес: ${addr}`);
+
+    if (!isRequest && bytes.length >= 7) {
+        const val = readBE32(bytes, 3);
+        lines.push(formatParam(addr, val));
+    }
+    lines.push(`Hex: ${toHex(bytes)}`);
+    return lines.join('\n');
+}
+
+function decodeWriteSingle(bytes) {
+    const addr = readBE16(bytes, 1);
+    const val = readBE32(bytes, 3);
+    const lines = [];
+    lines.push('Тип: Write single 0x06');
+    lines.push(`Адрес: ${addr}`);
+    lines.push(formatParam(addr, val));
+    lines.push(`Hex: ${toHex(bytes)}`);
+    return lines.join('\n');
+}
+
+function decodeWriteMultiple(bytes) {
+    const addr = readBE16(bytes, 1);
+    const count = readBE16(bytes, 3);
+    const isRequest = bytes.length === 5 + count * 4;
+    const lines = [];
+    lines.push(`Тип: Write multiple 0x10 (${isRequest ? 'запрос DL' : 'ответ UL (header)'})`);
+    lines.push(`Адрес: ${addr}, кол-во: ${count}`);
+
+    if (isRequest) {
+        lines.push('Значения:');
+        for (let i = 0; i < count; i++) {
+            const off = 5 + i * 4;
+            const val = readBE32(bytes, off);
+            lines.push(`  ${formatParam(addr + i, val)}`);
+        }
+    }
+    lines.push(`Hex: ${toHex(bytes)}`);
+    return lines.join('\n');
+}
+
+function decodeEvent(bytes) {
+    const id = readBE16(bytes, 1);
+    const payload = readBE16(bytes, 3);
+    const ev = EVENTS[id];
+    const lines = [];
+    lines.push('Тип: Event 0x20 (UL)');
+    if (ev) {
+        lines.push(`Событие: ${id} — ${ev.name}`);
+        lines.push(`Payload: ${ev.decode(payload)}`);
+    } else {
+        lines.push(`Событие: ${id} (неизвестно)`);
+        lines.push(`Payload: ${payload}`);
+    }
+    lines.push(`Hex: ${toHex(bytes)}`);
+    return lines.join('\n');
+}
+
+function decodeControl(bytes) {
+    const cmd = bytes[1];
+    const statusOrZero = bytes[2];
+    const payload = readBE32(bytes, 3);
+
+    const lines = [];
+    lines.push('Тип: Control 0x27');
+
+    if (statusOrZero === 0) {
+        lines.push('Направление: запрос DL или ответ UL (status=0, payload=0)');
+    } else {
+        lines.push('Направление: ответ UL');
+        const errName = ERROR_CODES[statusOrZero];
+        lines.push(`Status: ${statusOrZero}${errName ? ` — ${errName}` : ''}`);
+    }
+
+    const cmdName = COMMANDS[cmd] ?? `неизвестная (${cmd})`;
+    lines.push(`Команда: ${cmd} — ${cmdName}`);
+    if (payload !== 0) {
+        lines.push(`Payload: ${payload}`);
+    }
+    lines.push(`Hex: ${toHex(bytes)}`);
+    return lines.join('\n');
+}
+
+function decodePacket(bytes) {
+    if (!bytes.length) throw new Error('Пустой ввод');
+
+    const type = bytes[0];
+
+    if (type & 0x40 && type !== 0x40) {
+        if (bytes.length >= 2) return decodeError(bytes);
+    }
+
+    switch (type) {
+    case 0x99: return decodeRegular99(bytes);
+    case 0x03: return decodeReadMultiple(bytes);
+    case 0x06: return decodeWriteSingle(bytes);
+    case 0x07: return decodeReadSingle(bytes);
+    case 0x10: return decodeWriteMultiple(bytes);
+    case 0x20: return decodeEvent(bytes);
+    case 0x27: return decodeControl(bytes);
+    case 0x29:
+        return [
+            'Тип: FW update 0x29',
+            'Статус: не реализовано (заглушка → ошибка 0x69 0x01)',
+            `Hex: ${toHex(bytes)}`,
+        ].join('\n');
+    default:
+        return [
+            `Неизвестный тип: 0x${type.toString(16).toUpperCase().padStart(2, '0')}`,
+            `Длина: ${bytes.length} байт`,
+            `Hex: ${toHex(bytes)}`,
+        ].join('\n');
+    }
+}
+
+function encodeControl(cmd, payload) {
+    const p = parseInt(payload, 10) || 0;
+    return [0x27, cmd, 0x00, ...writeBE32(p)];
+}
+
+function encodeReadSingle(addr) {
+    return [0x07, ...writeBE16(addr)];
+}
+
+function encodeReadMultiple(addr, count) {
+    return [0x03, ...writeBE16(addr), ...writeBE16(count)];
+}
+
+function encodeWriteSingle(addr, value) {
+    const v = parseInt(value, 10);
+    if (Number.isNaN(v)) throw new Error('Некорректное значение param');
+    return [0x06, ...writeBE16(addr), ...writeBE32(v)];
+}
+
+function encodeWriteMultiple(addr, count, values) {
+    if (values.length !== count) {
+        throw new Error(`Нужно ${count} значений, получено ${values.length}`);
+    }
+    const packet = [0x10, ...writeBE16(addr), ...writeBE16(count)];
+    for (const raw of values) {
+        const v = parseInt(raw.trim(), 10);
+        if (Number.isNaN(v)) throw new Error(`Некорректное значение: ${raw}`);
+        packet.push(...writeBE32(v));
+    }
+    return packet;
+}
+
+function showToast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `result ${type} show`;
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function updateEncodeFields() {
+    const type = document.getElementById('encodeType').value;
+
+    const fields = {
+        encodeControl: type === '27',
+        encodeAddr: type === '07' || type === '03' || type === '06' || type === '10',
+        encodeCount: type === '03' || type === '10',
+        encodeValue: type === '06',
+        encodeMultiValues: type === '10',
+        encodePayload: type === '27',
+    };
+
+    for (const [id, visible] of Object.entries(fields)) {
+        document.getElementById(id).classList.toggle('hidden', !visible);
+    }
+
+    if (type === '06') {
+        const addr = parseInt(document.getElementById('encodeAddress').value, 10);
+        document.getElementById('encodeValueHint').textContent = WRITE_HINTS[addr] ?? '';
+    }
+}
+
+function initModeTabs() {
+    const tabs = document.querySelectorAll('.mode-tab');
+    const decodeSection = document.getElementById('decodeSection');
+    const encodeSection = document.getElementById('encodeSection');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const mode = tab.dataset.mode;
+            decodeSection.classList.toggle('hidden', mode !== 'decode');
+            encodeSection.classList.toggle('hidden', mode !== 'encode');
+        });
+    });
+}
+
+function initDecode() {
+    document.getElementById('decodeBtn').addEventListener('click', () => {
+        const input = document.getElementById('decodeInput').value.trim();
+        const output = document.getElementById('decodeOutput');
+        try {
+            const bytes = parseHex(input);
+            output.textContent = decodePacket(bytes);
+            showToast('Пакет декодирован', 'success');
+        } catch (e) {
+            output.textContent = `Ошибка: ${e.message}`;
+            showToast(e.message, 'error');
+        }
+    });
+
+    document.getElementById('decodeInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            document.getElementById('decodeBtn').click();
+        }
+    });
+}
+
+function initEncode() {
+    document.getElementById('encodeType').addEventListener('change', updateEncodeFields);
+    document.getElementById('encodeAddress').addEventListener('change', updateEncodeFields);
+
+    document.getElementById('encodeBtn').addEventListener('click', () => {
+        const type = document.getElementById('encodeType').value;
+        const output = document.getElementById('encodeOutput');
+        try {
+            let packet;
+            switch (type) {
+            case '27': {
+                const cmd = parseInt(document.getElementById('encodeCmd').value, 10);
+                const payload = document.getElementById('encodeControlPayload').value;
+                packet = encodeControl(cmd, payload);
+                break;
+            }
+            case '07': {
+                const addr = parseInt(document.getElementById('encodeAddress').value, 10);
+                packet = encodeReadSingle(addr);
+                break;
+            }
+            case '03': {
+                const addr = parseInt(document.getElementById('encodeAddress').value, 10);
+                const count = parseInt(document.getElementById('encodeParamCount').value, 10);
+                packet = encodeReadMultiple(addr, count);
+                break;
+            }
+            case '06': {
+                const addr = parseInt(document.getElementById('encodeAddress').value, 10);
+                const value = document.getElementById('encodeParamValue').value;
+                packet = encodeWriteSingle(addr, value);
+                break;
+            }
+            case '10': {
+                const addr = parseInt(document.getElementById('encodeAddress').value, 10);
+                const count = parseInt(document.getElementById('encodeParamCount').value, 10);
+                const values = document.getElementById('encodeMultiValueList').value
+                    .split('\n')
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+                packet = encodeWriteMultiple(addr, count, values);
+                break;
+            }
+            default:
+                throw new Error('Неизвестный тип пакета');
+            }
+            output.textContent = toHex(packet);
+            showToast('Пакет собран', 'success');
+        } catch (e) {
+            output.textContent = '';
+            showToast(e.message, 'error');
+        }
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+        const text = document.getElementById('encodeOutput').textContent;
+        if (!text) {
+            showToast('Нечего копировать', 'error');
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast('Скопировано', 'success');
+        } catch {
+            showToast('Не удалось скопировать', 'error');
+        }
+    });
+
+    updateEncodeFields();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initModeTabs();
+    initDecode();
+    initEncode();
+
+    // Пример для быстрого теста
+    document.getElementById('decodeInput').value =
+        '99 3C 0A 01 14 32';
+});
+
+</script>
+</body>
+</html>

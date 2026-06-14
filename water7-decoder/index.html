@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water7 Packet Tool — SoilTransmitter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Water7 Packet Tool</h1>
+            <p>SoilTransmitter — декодер / энкодер пакетов</p>
+        </header>
+
+        <div class="scaled-content">
+            <main>
+                <div id="toast" class="result hidden"></div>
+
+                <div class="mode-tabs">
+                    <button type="button" class="mode-tab active" data-mode="decode">Декодирование</button>
+                    <button type="button" class="mode-tab" data-mode="encode">Кодирование</button>
+                </div>
+
+                <!-- DECODE -->
+                <section id="decodeSection">
+                    <h2>Входной пакет (hex)</h2>
+                    <div class="preset-group">
+                        <div class="preset-input full-width">
+                            <label for="decodeInput">Hex-строка</label>
+                            <textarea id="decodeInput" class="input hex-textarea hex-input" rows="3"
+                                placeholder="99 3C 0A 01 14 32 0A …" spellcheck="false"></textarea>
+                            <span class="hint">Пробелы, запятые и префикс 0x допустимы</span>
+                        </div>
+                        <div class="flash-buttons single-col" style="margin-top: 15px;">
+                            <button type="button" id="decodeBtn" class="btn btn-success">Декодировать</button>
+                        </div>
+                        <div class="output-container">
+                            <label for="decodeOutput">Результат</label>
+                            <pre id="decodeOutput" class="output-textarea"></pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ENCODE -->
+                <section id="encodeSection" class="hidden">
+                    <h2>Собрать пакет</h2>
+                    <div class="preset-group">
+                        <div class="preset-inputs">
+                            <div class="preset-input full-width">
+                                <label for="encodeType">Тип пакета</label>
+                                <select id="encodeType" class="input select">
+                                    <option value="27">0x27 — Control (команда)</option>
+                                    <option value="07">0x07 — Read single</option>
+                                    <option value="03">0x03 — Read multiple</option>
+                                    <option value="06">0x06 — Write single</option>
+                                    <option value="10">0x10 — Write multiple</option>
+                                </select>
+                            </div>
+
+                            <!-- Control -->
+                            <div id="encodeControl" class="encode-fields preset-input full-width">
+                                <label for="encodeCmd">Команда</label>
+                                <select id="encodeCmd" class="input select">
+                                    <option value="1">1 — FORCE_WAKEUP</option>
+                                    <option value="2">2 — RESET_DEVICE</option>
+                                    <option value="3">3 — FACTORY_RESET</option>
+                                    <option value="4">4 — SEND_STATUS_NOW</option>
+                                </select>
+                                <span class="hint">Payload для команд 1–4 обычно 0</span>
+                            </div>
+
+                            <!-- Read/Write address -->
+                            <div id="encodeAddr" class="encode-fields hidden preset-input">
+                                <label for="encodeAddress">Адрес param</label>
+                                <select id="encodeAddress" class="input select">
+                                    <option value="0">0 — Humidity (%)</option>
+                                    <option value="1">1 — Conductivity (µS/cm)</option>
+                                    <option value="2">2 — Temperature (0.01 °C)</option>
+                                    <option value="3">3 — Battery (mV, RO)</option>
+                                    <option value="10">10 — WakePeriod (сек)</option>
+                                    <option value="100">100 — ProtocolVersion</option>
+                                    <option value="101">101 — SensorType</option>
+                                    <option value="102">102 — BoardRevision</option>
+                                    <option value="103">103 — FirmwareVersion</option>
+                                    <option value="104">104 — ManufactureDate</option>
+                                </select>
+                            </div>
+
+                            <!-- Read/Write count -->
+                            <div id="encodeCount" class="encode-fields hidden preset-input">
+                                <label for="encodeParamCount">Кол-во params</label>
+                                <input type="number" id="encodeParamCount" class="input" value="1" min="1" max="14">
+                            </div>
+
+                            <!-- Write value -->
+                            <div id="encodeValue" class="encode-fields hidden preset-input full-width">
+                                <label for="encodeParamValue">Значение (int32)</label>
+                                <input type="text" id="encodeParamValue" class="input" placeholder="3600" value="0">
+                                <span class="hint" id="encodeValueHint"></span>
+                            </div>
+
+                            <!-- Write multiple values -->
+                            <div id="encodeMultiValues" class="encode-fields hidden preset-input full-width">
+                                <label for="encodeMultiValueList">Значения (по одному на строку, int32 BE)</label>
+                                <textarea id="encodeMultiValueList" class="input hex-textarea" rows="4"
+                                    placeholder="25&#10;1200&#10;2350"></textarea>
+                            </div>
+
+                            <div id="encodePayload" class="encode-fields preset-input full-width">
+                                <label for="encodeControlPayload">Payload (int32 BE, опционально)</label>
+                                <input type="text" id="encodeControlPayload" class="input" value="0">
+                            </div>
+                        </div>
+
+                        <div class="flash-buttons single-col" style="margin-top: 15px;">
+                            <button type="button" id="encodeBtn" class="btn btn-success">Собрать пакет</button>
+                        </div>
+
+                        <div class="copy-row">
+                            <pre id="encodeOutput" class="output-textarea"></pre>
+                            <button type="button" id="copyBtn" class="btn btn-outline">Копировать</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
