@@ -457,7 +457,7 @@ function initEncode() {
             default:
                 throw new Error('Неизвестный тип пакета');
             }
-            output.textContent = toHex(packet);
+            output.textContent = toHex(packet, '');
             showToast('Пакет собран', 'success');
         } catch (e) {
             output.textContent = '';
