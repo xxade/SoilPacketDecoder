@@ -375,25 +375,47 @@ function decodeEvent(bytes) {
 
 function decodeControl(bytes) {
     const cmd = bytes[1];
-    const statusOrZero = bytes[2];
-    const payload = readBE32(bytes, 3);
+    const isRequest = bytes.length === 6;
+    const isResponse = bytes.length === 7;
 
     const lines = [];
     lines.push('Тип: Control 0x27');
+    lines.push(`Длина: ${bytes.length} байт (ожид. 6 запрос / 7 ответ)`);
 
-    if (statusOrZero === 0) {
-        lines.push('Направление: запрос DL или ответ UL (status=0, payload=0)');
-    } else {
+    if (isRequest) {
+        const payload = readBE32(bytes, 2);
+        lines.push('Направление: запрос DL');
+        lines.push(`Команда: ${cmd} — ${COMMANDS[cmd] ?? `неизвестная (${cmd})`}`);
+        if (payload !== 0) {
+            lines.push(`Payload: ${payload}`);
+        }
+    } else if (isResponse) {
+        const status = bytes[2];
+        const payload = readBE32(bytes, 3);
         lines.push('Направление: ответ UL');
-        const errName = ERROR_CODES[statusOrZero];
-        lines.push(`Status: ${statusOrZero}${errName ? ` — ${errName}` : ''}`);
+        lines.push(`Команда: ${cmd} — ${COMMANDS[cmd] ?? `неизвестная (${cmd})`}`);
+        if (status === 0) {
+            lines.push('Status: 0 (OK)');
+        } else {
+            const errName = ERROR_CODES[status];
+            lines.push(`Status: ${status}${errName ? ` — ${errName}` : ''}`);
+        }
+        if (payload !== 0) {
+            lines.push(`Payload: ${payload}`);
+        }
+    } else {
+        lines.push('Предупреждение: нестандартная длина пакета');
+        if (bytes.length >= 3) {
+            lines.push(`Команда: ${cmd} — ${COMMANDS[cmd] ?? `неизвестная (${cmd})`}`);
+        }
+        if (bytes.length >= 7) {
+            lines.push(`Status: ${bytes[2]}`);
+            lines.push(`Payload: ${readBE32(bytes, 3)}`);
+        } else if (bytes.length >= 6) {
+            lines.push(`Payload: ${readBE32(bytes, 2)}`);
+        }
     }
 
-    const cmdName = COMMANDS[cmd] ?? `неизвестная (${cmd})`;
-    lines.push(`Команда: ${cmd} — ${cmdName}`);
-    if (payload !== 0) {
-        lines.push(`Payload: ${payload}`);
-    }
     lines.push(`Hex: ${toHex(bytes)}`);
     return lines.join('\n');
 }
@@ -432,7 +454,7 @@ function decodePacket(bytes) {
 
 function encodeControl(cmd, payload) {
     const p = parseInt(payload, 10) || 0;
-    return [0x27, cmd, 0x00, ...writeBE32(p)];
+    return [0x27, cmd, ...writeBE32(p)];
 }
 
 function encodeReadSingle(addr) {

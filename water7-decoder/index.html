@@ -68,7 +68,7 @@
                                     <option value="3">3 — FACTORY_RESET</option>
                                     <option value="4">4 — SEND_STATUS_NOW</option>
                                 </select>
-                                <span class="hint">Payload для команд 1–4 обычно 0</span>
+                                <span class="hint">Запрос: [27] [cmd] [payload 4 B BE], 6 байт</span>
                             </div>
 
                             <!-- Read/Write address -->
@@ -109,8 +109,9 @@
                             </div>
 
                             <div id="encodePayload" class="encode-fields preset-input full-width">
-                                <label for="encodeControlPayload">Payload (int32 BE, опционально)</label>
+                                <label for="encodeControlPayload">Payload (int32 BE)</label>
                                 <input type="text" id="encodeControlPayload" class="input" value="0">
+                                <span class="hint">Для команд 1–4 обычно 0</span>
                             </div>
                         </div>
 
