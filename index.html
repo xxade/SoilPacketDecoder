@@ -539,16 +539,70 @@ select.select {
 'use strict';
 
 const PARAMS = {
-    0:   { name: 'Humidity', unit: '%', rw: 'RW' },
-    1:   { name: 'Conductivity', unit: 'µS/cm', rw: 'RW' },
-    2:   { name: 'Temperature', unit: '0.01 °C', rw: 'RW', decode: v => (v / 100).toFixed(2) + ' °C' },
-    3:   { name: 'Battery', unit: 'mV', rw: 'RO' },
-    10:  { name: 'WakePeriod', unit: 'сек', rw: 'RW' },
-    100: { name: 'ProtocolVersion', unit: '—', rw: 'RO' },
-    101: { name: 'SensorType', unit: 'enum', rw: 'RO', decode: decodeSensorType },
-    102: { name: 'BoardRevision', unit: '—', rw: 'RO' },
-    103: { name: 'FirmwareVersion', unit: 'packed', rw: 'RO', decode: decodeFirmwareVersion },
-    104: { name: 'ManufactureDate', unit: 'uint16', rw: 'RO' },
+    0: {
+        name: 'Humidity',
+        rw: 'RW',
+        source: 'первый online датчик RS-485',
+        writeRange: '0…100',
+        decode: v => `${v} %`,
+    },
+    1: {
+        name: 'Conductivity',
+        rw: 'RW',
+        source: 'первый online датчик RS-485',
+        writeRange: '0…65535',
+        decode: v => `${v} µS/cm`,
+    },
+    2: {
+        name: 'Temperature',
+        rw: 'RW',
+        source: 'первый online датчик RS-485',
+        writeRange: '−5000…20500 (сотые °C)',
+        decode: v => `${(v / 100).toFixed(2)} °C (raw ${v})`,
+    },
+    3: {
+        name: 'Battery',
+        rw: 'RO',
+        source: 'vdda_mv (VREFINT)',
+        decode: v => `${v} mV`,
+    },
+    10: {
+        name: 'WakePeriod',
+        rw: 'RW',
+        source: 'settings.wake_period_sec, persist flash',
+        writeRange: '60…604800',
+        decode: decodeWakePeriod,
+    },
+    100: {
+        name: 'ProtocolVersion',
+        rw: 'RO',
+        source: 'константа прошивки',
+        decode: v => `${v}`,
+    },
+    101: {
+        name: 'SensorType',
+        rw: 'RO',
+        source: 'ConfigBlock',
+        decode: decodeSensorType,
+    },
+    102: {
+        name: 'BoardRevision',
+        rw: 'RO',
+        source: 'ConfigBlock',
+        decode: v => `ревизия ${v}`,
+    },
+    103: {
+        name: 'FirmwareVersion',
+        rw: 'RO',
+        source: 'константа прошивки',
+        decode: decodeFirmwareVersion,
+    },
+    104: {
+        name: 'ManufactureDate',
+        rw: 'RO',
+        source: 'ConfigBlock uint16',
+        decode: v => `${v} (0x${(v & 0xFFFF).toString(16).toUpperCase().padStart(4, '0')})`,
+    },
 };
 
 const COMMANDS = {
@@ -596,14 +650,28 @@ const WRITE_HINTS = {
 
 function decodeSensorType(v) {
     const map = { 0: 'unknown', 1: 'SOIL_RS485' };
-    return `${v} (${map[v] ?? '?'})`;
+    return `${map[v] ?? 'неизвестно'} (${v})`;
 }
 
 function decodeFirmwareVersion(v) {
     const year = (v >> 10) & 0x3FFF;
     const month = (v >> 6) & 0x0F;
     const day = v & 0x3F;
-    return `${year}.${month}.${day} (raw 0x${(v >>> 0).toString(16).toUpperCase()})`;
+    return `${year}.${month}.${day}`;
+}
+
+function decodeWakePeriod(sec) {
+    if (sec < 60) return `${sec} сек`;
+    const parts = [`${sec} сек`];
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    const human = [];
+    if (h > 0) human.push(`${h} ч`);
+    if (m > 0) human.push(`${m} мин`);
+    if (s > 0 && h === 0) human.push(`${s} с`);
+    if (human.length) parts.push(`(${human.join(' ')})`);
+    return parts.join(' ');
 }
 
 function parseHex(str) {
@@ -644,9 +712,26 @@ function writeBE32(val) {
 
 function formatParam(addr, raw) {
     const p = PARAMS[addr];
-    if (!p) return `param ${addr}: ${raw}`;
-    const decoded = p.decode ? p.decode(raw) : `${raw} ${p.unit}`;
-    return `${p.name} [${addr}] = ${decoded}`;
+    if (!p) {
+        return [
+            `Param [${addr}] — неизвестный адрес`,
+            `  значение: ${raw}`,
+            `  raw int32 BE: ${raw} (0x${(raw >>> 0).toString(16).toUpperCase().padStart(8, '0')})`,
+        ].join('\n');
+    }
+
+    const lines = [
+        `${p.name} [${addr}] (${p.rw})`,
+        `  значение: ${p.decode(raw)}`,
+        `  raw int32 BE: ${raw}`,
+    ];
+    if (p.source) {
+        lines.push(`  источник: ${p.source}`);
+    }
+    if (p.writeRange) {
+        lines.push(`  диапазон записи: ${p.writeRange}`);
+    }
+    return lines.join('\n');
 }
 
 function decodeVddWire(wire) {
@@ -722,7 +807,8 @@ function decodeReadMultiple(bytes) {
         for (let i = 0; i < count; i++) {
             const off = 5 + i * 4;
             const val = readBE32(bytes, off);
-            lines.push(`  ${formatParam(addr + i, val)}`);
+            lines.push(formatParam(addr + i, val));
+            if (i < count - 1) lines.push('');
         }
     }
     lines.push(`Hex: ${toHex(bytes)}`);
@@ -768,7 +854,8 @@ function decodeWriteMultiple(bytes) {
         for (let i = 0; i < count; i++) {
             const off = 5 + i * 4;
             const val = readBE32(bytes, off);
-            lines.push(`  ${formatParam(addr + i, val)}`);
+            lines.push(formatParam(addr + i, val));
+            if (i < count - 1) lines.push('');
         }
     }
     lines.push(`Hex: ${toHex(bytes)}`);
