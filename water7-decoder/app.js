@@ -1,5 +1,10 @@
 'use strict';
 
+const BOARD_REVISIONS = {
+    0: 'Rev 1 Green',
+    1: 'Rev 2 White',
+};
+
 const PARAMS = {
     0: {
         name: 'Humidity',
@@ -51,19 +56,19 @@ const PARAMS = {
         name: 'BoardRevision',
         rw: 'RO',
         source: 'ConfigBlock',
-        decode: v => `ревизия ${v}`,
+        decode: decodeBoardRevision,
     },
     103: {
         name: 'FirmwareVersion',
         rw: 'RO',
         source: 'константа прошивки',
-        decode: decodeFirmwareVersion,
+        decode: decodePackedDate,
     },
     104: {
         name: 'ManufactureDate',
         rw: 'RO',
-        source: 'ConfigBlock uint16',
-        decode: v => `${v} (0x${(v & 0xFFFF).toString(16).toUpperCase().padStart(4, '0')})`,
+        source: 'ConfigBlock',
+        decode: decodePackedDate,
     },
 };
 
@@ -112,14 +117,21 @@ const WRITE_HINTS = {
 
 function decodeSensorType(v) {
     const map = { 0: 'unknown', 1: 'SOIL_RS485' };
-    return `${map[v] ?? 'неизвестно'} (${v})`;
+    const id = v & 0xFF;
+    return `${map[id] ?? 'неизвестно'} (${id})`;
 }
 
-function decodeFirmwareVersion(v) {
+function decodeBoardRevision(v) {
+    const rev = v & 0xFF;
+    const name = BOARD_REVISIONS[rev];
+    return name ? `${name} (rev ${rev})` : `rev ${rev} (неизвестная)`;
+}
+
+function decodePackedDate(v) {
     const year = (v >> 10) & 0x3FFF;
     const month = (v >> 6) & 0x0F;
     const day = v & 0x3F;
-    return `${year}.${month}.${day}`;
+    return `${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`;
 }
 
 function decodeWakePeriod(sec) {
@@ -170,6 +182,18 @@ function writeBE16(val) {
 function writeBE32(val) {
     val = val >> 0;
     return [(val >> 24) & 0xFF, (val >> 16) & 0xFF, (val >> 8) & 0xFF, val & 0xFF];
+}
+
+function formatParamMeta(addr) {
+    const p = PARAMS[addr];
+    if (!p) {
+        return `Param [${addr}] — неизвестный адрес`;
+    }
+    const lines = [`${p.name} [${addr}] (${p.rw})`];
+    if (p.source) {
+        lines.push(`  источник: ${p.source}`);
+    }
+    return lines.join('\n');
 }
 
 function formatParam(addr, raw) {
@@ -272,6 +296,12 @@ function decodeReadMultiple(bytes) {
             lines.push(formatParam(addr + i, val));
             if (i < count - 1) lines.push('');
         }
+    } else if (bytes.length === 5) {
+        lines.push('Параметры:');
+        for (let i = 0; i < count; i++) {
+            lines.push(formatParamMeta(addr + i));
+            if (i < count - 1) lines.push('');
+        }
     }
     lines.push(`Hex: ${toHex(bytes)}`);
     return lines.join('\n');
@@ -287,6 +317,8 @@ function decodeReadSingle(bytes) {
     if (!isRequest && bytes.length >= 7) {
         const val = readBE32(bytes, 3);
         lines.push(formatParam(addr, val));
+    } else if (isRequest) {
+        lines.push(formatParamMeta(addr));
     }
     lines.push(`Hex: ${toHex(bytes)}`);
     return lines.join('\n');
