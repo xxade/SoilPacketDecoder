@@ -385,6 +385,48 @@ select.select {
     display: none;
 }
 
+.schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+
+.schedule-grid label {
+    font-size: 0.85em;
+}
+
+.schedule-grid .input {
+    font-size: 0.9em;
+    min-height: 40px;
+    padding: 6px 8px;
+}
+
+.schedule-time {
+    font-variant-numeric: tabular-nums;
+}
+
+.schedule-period-custom {
+    margin-top: 6px;
+}
+
+.schedule-period-custom.hidden {
+    display: none;
+}
+
+.schedule-preview {
+    display: block;
+    grid-column: 1 / -1;
+    margin-top: 2px;
+    color: #888;
+    font-size: 0.85em;
+    line-height: 1.35;
+}
+
+.schedule-preview.warn {
+    color: #9a6b00;
+}
+
 .copy-row {
     display: flex;
     flex-direction: column;
@@ -459,12 +501,44 @@ select.select {
                             <div class="preset-input full-width">
                                 <label for="encodeType">Тип пакета</label>
                                 <select id="encodeType" class="input select">
+                                    <option value="schedule">Задать параметры расписания</option>
                                     <option value="27">0x27 — Control (команда)</option>
                                     <option value="07">0x07 — Read single</option>
                                     <option value="03">0x03 — Read multiple</option>
                                     <option value="06">0x06 — Write single</option>
                                     <option value="10">0x10 — Write multiple</option>
                                 </select>
+                            </div>
+
+                            <!-- Schedule (Write multiple 11–13) -->
+                            <div id="encodeSchedule" class="encode-fields preset-input full-width">
+                                <p class="subsection-label">Расписание опросов (UTC)</p>
+                                <div class="schedule-grid">
+                                    <div class="preset-input">
+                                        <label for="scheduleFirstTime">Первый опрос</label>
+                                        <input type="time" id="scheduleFirstTime" class="input schedule-time" value="03:00">
+                                    </div>
+                                    <div class="preset-input">
+                                        <label for="schedulePeriodPreset">Интервал</label>
+                                        <select id="schedulePeriodPreset" class="input select">
+                                            <option value="30">30 мин</option>
+                                            <option value="60" selected>1 ч</option>
+                                            <option value="120">2 ч</option>
+                                            <option value="180">3 ч</option>
+                                            <option value="360">6 ч</option>
+                                            <option value="720">12 ч</option>
+                                            <option value="1440">24 ч</option>
+                                            <option value="custom">Свой…</option>
+                                        </select>
+                                        <input type="number" id="schedulePeriodMin" class="input schedule-period-custom hidden"
+                                            value="60" min="1" max="1440" placeholder="мин">
+                                    </div>
+                                    <div class="preset-input">
+                                        <label for="scheduleCount">Опросов</label>
+                                        <input type="number" id="scheduleCount" class="input" value="1" min="0" max="255">
+                                    </div>
+                                    <span id="schedulePreview" class="schedule-preview">последний опрос в 03:00 UTC</span>
+                                </div>
                             </div>
 
                             <!-- Control -->
@@ -487,7 +561,9 @@ select.select {
                                     <option value="1">1 — Conductivity (µS/cm)</option>
                                     <option value="2">2 — Temperature (0.01 °C)</option>
                                     <option value="3">3 — Battery (mV, RO)</option>
-                                    <option value="10">10 — WakePeriod (сек)</option>
+                                    <option value="11">11 — WakeFirstMin (UTC)</option>
+                                    <option value="12">12 — WakePeriodMin (мин)</option>
+                                    <option value="13">13 — WakeCount</option>
                                     <option value="100">100 — ProtocolVersion</option>
                                     <option value="101">101 — SensorType</option>
                                     <option value="102">102 — BoardRevision</option>
@@ -517,8 +593,9 @@ select.select {
                             </div>
 
                             <div id="encodePayload" class="encode-fields preset-input full-width">
-                                <label for="encodeControlPayload">Payload (int32 BE, опционально)</label>
+                                <label for="encodeControlPayload">Payload (int32 BE)</label>
                                 <input type="text" id="encodeControlPayload" class="input" value="0">
+                                <span class="hint">Для команд 1–4 обычно 0</span>
                             </div>
                         </div>
 
@@ -571,12 +648,26 @@ const PARAMS = {
         source: 'vdda_mv (VREFINT)',
         decode: v => `${v} mV`,
     },
-    10: {
-        name: 'WakePeriod',
+    11: {
+        name: 'WakeFirstMin',
         rw: 'RW',
-        source: 'settings.wake_period_sec, persist flash',
-        writeRange: '60…604800',
-        decode: decodeWakePeriod,
+        source: 'settings.wake_first_min, persist flash',
+        writeRange: '0…1439',
+        decode: decodeWakeFirstMin,
+    },
+    12: {
+        name: 'WakePeriodMin',
+        rw: 'RW',
+        source: 'settings.wake_period_min, persist flash',
+        writeRange: '1…1440',
+        decode: decodeWakePeriodMin,
+    },
+    13: {
+        name: 'WakeCount',
+        rw: 'RW',
+        source: 'settings.wake_count, persist flash',
+        writeRange: '0…255 (0 = нет автоопроса)',
+        decode: decodeWakeCount,
     },
     100: {
         name: 'ProtocolVersion',
@@ -622,7 +713,7 @@ const EVENTS = {
     2: { name: 'SENSOR_ERROR', decode: () => 'все датчики offline' },
     3: { name: 'MODBUS_TIMEOUT', decode: p => `Modbus ID = ${p}` },
     4: { name: 'FLASH_ERROR', decode: () => 'ошибка flash' },
-    5: { name: 'SETTINGS_CHANGED', decode: () => 'WakePeriod записан' },
+    5: { name: 'SETTINGS_CHANGED', decode: () => 'расписание wake (11–13) записано' },
     6: { name: 'DEVICE_RESET', decode: () => 'сброс / init' },
 };
 
@@ -650,7 +741,9 @@ const WRITE_HINTS = {
     0: '0…100 %',
     1: '0…65535 µS/cm',
     2: '−5000…20500 (сотые °C)',
-    10: '60…604800 сек',
+    11: '0…1439 (мин от 00:00 UTC)',
+    12: '1…1440 мин',
+    13: '0…255 (0 = нет автоопроса)',
 };
 
 function decodeSensorType(v) {
@@ -672,18 +765,27 @@ function decodePackedDate(v) {
     return `${year}.${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`;
 }
 
-function decodeWakePeriod(sec) {
-    if (sec < 60) return `${sec} сек`;
-    const parts = [`${sec} сек`];
-    const h = Math.floor(sec / 3600);
-    const m = Math.floor((sec % 3600) / 60);
-    const s = sec % 60;
+function decodeWakeFirstMin(min) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${min} мин (${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} UTC)`;
+}
+
+function decodeWakePeriodMin(min) {
+    if (min < 60) return `${min} мин`;
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    const parts = [`${min} мин`];
     const human = [];
     if (h > 0) human.push(`${h} ч`);
     if (m > 0) human.push(`${m} мин`);
-    if (s > 0 && h === 0) human.push(`${s} с`);
     if (human.length) parts.push(`(${human.join(' ')})`);
     return parts.join(' ');
+}
+
+function decodeWakeCount(n) {
+    if (n === 0) return '0 (нет автоопроса)';
+    return `${n}`;
 }
 
 function parseHex(str) {
@@ -1015,11 +1117,103 @@ function encodeWriteMultiple(addr, count, values) {
     }
     const packet = [0x10, ...writeBE16(addr), ...writeBE16(count)];
     for (const raw of values) {
-        const v = parseInt(raw.trim(), 10);
+        const v = typeof raw === 'number' ? raw : parseInt(String(raw).trim(), 10);
         if (Number.isNaN(v)) throw new Error(`Некорректное значение: ${raw}`);
         packet.push(...writeBE32(v));
     }
     return packet;
+}
+
+const MINUTES_PER_DAY = 1440;
+
+function formatTimeUTC(minute) {
+    const h = Math.floor(minute / 60);
+    const m = minute % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function parseTimeToMinutes(timeStr) {
+    const parts = timeStr.split(':');
+    if (parts.length < 2) throw new Error('Некорректное время');
+    const h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    if (Number.isNaN(h) || Number.isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+        throw new Error('Время должно быть 00:00…23:59 UTC');
+    }
+    return h * 60 + m;
+}
+
+function readScheduleInputs() {
+    const firstMin = parseTimeToMinutes(document.getElementById('scheduleFirstTime').value);
+    const preset = document.getElementById('schedulePeriodPreset').value;
+    let periodMin;
+    if (preset === 'custom') {
+        periodMin = parseInt(document.getElementById('schedulePeriodMin').value, 10);
+    } else {
+        periodMin = parseInt(preset, 10);
+    }
+    const count = parseInt(document.getElementById('scheduleCount').value, 10);
+    if (Number.isNaN(periodMin) || periodMin < 1 || periodMin > 1440) {
+        throw new Error('Интервал: 1…1440 мин');
+    }
+    if (Number.isNaN(count) || count < 0 || count > 255) {
+        throw new Error('Опросов в сутки: 0…255');
+    }
+    if (firstMin < 0 || firstMin > 1439) {
+        throw new Error('Первый опрос: 0…1439 мин от полуночи UTC');
+    }
+    return { firstMin, periodMin, count };
+}
+
+function computeScheduleSlots(firstMin, periodMin, count) {
+    const slots = [];
+    let overflow = false;
+    for (let i = 0; i < count; i++) {
+        const minute = firstMin + i * periodMin;
+        if (minute >= MINUTES_PER_DAY) {
+            overflow = true;
+            break;
+        }
+        slots.push(minute);
+    }
+    return { slots, overflow };
+}
+
+function buildSchedulePreviewText({ firstMin, periodMin, count }) {
+    if (count === 0) {
+        return { text: 'автоопрос отключён (WakeCount = 0)', warn: false };
+    }
+    const { slots, overflow } = computeScheduleSlots(firstMin, periodMin, count);
+    if (slots.length === 0) {
+        return { text: 'внимание: переполнение дня', warn: true };
+    }
+    const last = formatTimeUTC(slots[slots.length - 1]);
+    if (overflow) {
+        return { text: 'внимание: переполнение дня', warn: true };
+    }
+    if (slots.length === 1) {
+        return { text: `опрос в ${last} UTC`, warn: false };
+    }
+    return { text: `последний опрос в ${last} UTC`, warn: false };
+}
+
+function updateSchedulePreview() {
+    const el = document.getElementById('schedulePreview');
+    if (!el) return;
+    try {
+        const data = readScheduleInputs();
+        const { text, warn } = buildSchedulePreviewText(data);
+        el.textContent = text;
+        el.classList.toggle('warn', warn);
+    } catch (e) {
+        el.textContent = e.message;
+        el.classList.add('warn');
+    }
+}
+
+function encodeSchedulePacket() {
+    const { firstMin, periodMin, count } = readScheduleInputs();
+    return encodeWriteMultiple(11, 3, [firstMin, periodMin, count]);
 }
 
 function showToast(msg, type) {
@@ -1034,6 +1228,7 @@ function updateEncodeFields() {
     const type = document.getElementById('encodeType').value;
 
     const fields = {
+        encodeSchedule: type === 'schedule',
         encodeControl: type === '27',
         encodeAddr: type === '07' || type === '03' || type === '06' || type === '10',
         encodeCount: type === '03' || type === '10',
@@ -1044,6 +1239,10 @@ function updateEncodeFields() {
 
     for (const [id, visible] of Object.entries(fields)) {
         document.getElementById(id).classList.toggle('hidden', !visible);
+    }
+
+    if (type === 'schedule') {
+        updateSchedulePreview();
     }
 
     if (type === '06') {
@@ -1090,9 +1289,24 @@ function initDecode() {
     });
 }
 
+function initScheduleEncode() {
+    const ids = [
+        'scheduleFirstTime', 'schedulePeriodPreset', 'schedulePeriodMin', 'scheduleCount',
+    ];
+    for (const id of ids) {
+        document.getElementById(id).addEventListener('input', updateSchedulePreview);
+        document.getElementById(id).addEventListener('change', updateSchedulePreview);
+    }
+    document.getElementById('schedulePeriodPreset').addEventListener('change', () => {
+        const custom = document.getElementById('schedulePeriodPreset').value === 'custom';
+        document.getElementById('schedulePeriodMin').classList.toggle('hidden', !custom);
+    });
+}
+
 function initEncode() {
     document.getElementById('encodeType').addEventListener('change', updateEncodeFields);
     document.getElementById('encodeAddress').addEventListener('change', updateEncodeFields);
+    initScheduleEncode();
 
     document.getElementById('encodeBtn').addEventListener('click', () => {
         const type = document.getElementById('encodeType').value;
@@ -1100,6 +1314,9 @@ function initEncode() {
         try {
             let packet;
             switch (type) {
+            case 'schedule':
+                packet = encodeSchedulePacket();
+                break;
             case '27': {
                 const cmd = parseInt(document.getElementById('encodeCmd').value, 10);
                 const payload = document.getElementById('encodeControlPayload').value;

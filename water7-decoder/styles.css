@@ -378,6 +378,48 @@ select.select {
     display: none;
 }
 
+.schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    align-items: start;
+}
+
+.schedule-grid label {
+    font-size: 0.85em;
+}
+
+.schedule-grid .input {
+    font-size: 0.9em;
+    min-height: 40px;
+    padding: 6px 8px;
+}
+
+.schedule-time {
+    font-variant-numeric: tabular-nums;
+}
+
+.schedule-period-custom {
+    margin-top: 6px;
+}
+
+.schedule-period-custom.hidden {
+    display: none;
+}
+
+.schedule-preview {
+    display: block;
+    grid-column: 1 / -1;
+    margin-top: 2px;
+    color: #888;
+    font-size: 0.85em;
+    line-height: 1.35;
+}
+
+.schedule-preview.warn {
+    color: #9a6b00;
+}
+
 .copy-row {
     display: flex;
     flex-direction: column;
